@@ -39,8 +39,8 @@
      docker compose -f docker-compose.prod.yml up -d`.
    - **OJO:** al apagar/encender, DigitalOcean **puede cambiar la IP pública**
      (salvo IP reservada). Si cambió, usar la nueva IP.
-1. **Commitear y pushear** los cambios del backend (quedaron SIN commitear):
-   `docker-compose.prod.yml`, `DEPLOY-digitalocean.md`, `CLAUDE.md`.
+1. ~~**Commitear y pushear** los cambios del backend~~ ✅ HECHO (2026-06-03,
+   commit `2af8c30`): `docker-compose.prod.yml`, `DEPLOY-digitalocean.md`, `CLAUDE.md`.
 2. **(Opcional) Flujo `git pull` en el Droplet:** generar SSH key en el server,
    agregarla como deploy key en cada repo, `git clone` ambos lado a lado. Así
    actualizás con `git pull` + `docker compose -f docker-compose.prod.yml up --build -d`
@@ -165,7 +165,7 @@ api+db), `docker-compose.prod.yml` (prod: web+api+db), `.dockerignore`, `.env.ex
 - [ ] **Backups** de Postgres con `pg_dump` (cron) — FALTA.
 - [ ] **Flujo `git pull` en el Droplet** (hoy el código se copió, no se clonó) — FALTA.
 - [ ] **HTTPS / dominio** (Caddy delante, ver guía) — FALTA.
-- [ ] **Commitear** cambios del backend (compose prod + guía + este CLAUDE.md) — FALTA.
+- [x] **Commitear** cambios del backend (compose prod + guía + este CLAUDE.md) — commit `2af8c30`.
 
 ## 7. Decisiones tomadas
 - Horas: cálculo automático entrada/salida con descuento de 1 h si > 8 h. (No hay
