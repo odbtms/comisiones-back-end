@@ -1,0 +1,76 @@
+# Stack de PRODUCCIÓN (DigitalOcean Droplet): db + api + web (nginx).
+#
+#   db   PostgreSQL, sin puerto público.
+#   api  Spring Boot, SIN puerto público (solo la usa nginx por la red interna).
+#   web  nginx: sirve el front y hace proxy_pass /api -> api:8080. Único expuesto.
+#
+# Supone los DOS repos clonados lado a lado en el Droplet:
+#   ~/comisiones-backend     (este)
+#   ~/comisiones-front-v2    (el front)
+#
+# Uso:  docker compose -f docker-compose.prod.yml up --build -d
+# Variables sensibles en .env (ver .env.example).
+
+services:
+  db:
+    image: postgres:16
+    container_name: comisiones-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-comisiones}
+      POSTGRES_USER: ${DB_USER:-comisiones}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD en .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-comisiones} -d ${DB_NAME:-comisiones}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - comisiones-net
+
+  api:
+    build: .
+    container_name: comisiones-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-comisiones}
+      DB_USER: ${DB_USER:-comisiones}
+      DB_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD en .env}
+      JPA_DDL: update
+      # Mismo origen (nginx hace el proxy), así que CORS no aplica en prod.
+      # Se deja restrictivo por las dudas.
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - comisiones-net
+    # Sin "ports": la API no se expone hacia afuera, solo nginx la alcanza.
+
+  web:
+    build:
+      context: ../comisiones-front-v2
+    container_name: comisiones-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      # Cuando agregues HTTPS, sumá "443:443" y montá los certificados.
+    networks:
+      - comisiones-net
+
+volumes:
+  db-data:
+
+networks:
+  comisiones-net:
+    driver: bridge

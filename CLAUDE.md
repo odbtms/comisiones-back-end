@@ -2,20 +2,51 @@
 
 > Lee esto primero al retomar. Resume QUÉ es el proyecto, QUÉ está hecho y QUÉ falta.
 
-## 0. DÓNDE RETOMAR (próximos pasos, en orden)
+## 0. ESTADO ACTUAL + DÓNDE RETOMAR
 
-El backend está **completo y compila**; falta probarlo con Docker y subirlo.
-Al volver, seguir por acá:
+> **Nota:** se RETOMÓ este backend Spring Boot. El front viejo
+> (`comisiones-frontend`, React + Vite + **Supabase**, en `odbtms.github.io/comisiones`)
+> queda como está. Se armó un **front nuevo** — **`comisiones-front-v2`**
+> (React + Vite, SIN Supabase) — que consume ESTE backend, y **ya está TODO
+> desplegado y funcionando en DigitalOcean.**
 
-1. **Probar el stack local con Docker**: prender Docker Desktop, luego
-   `copy .env.example .env` (editar `DB_PASSWORD`) y `docker compose up --build`.
-   Verificar `http://localhost:8080/actuator/health` → `{"status":"UP"}`.
-2. **Subir el backend a un repo privado de GitHub** (falta `git init` + primer commit
-   + crear repo privado + push). El repo aún NO existe.
-3. **Crear el frontend** React + Vite en su propio repo privado (ver sección 6).
-4. **Desplegar en Azure** (VM B1s, crédito $100 de estudiante) siguiendo `DEPLOY-azure.md`.
+**Repos:**
+- backend: https://github.com/odbtms/comisiones-back-end (privado)
+- front nuevo: https://github.com/odbtms/comisiones-front-v2 (privado, ya subido)
 
-Estado git: rama `master`, **sin commits todavía**.
+### ✅ DESPLEGADO Y FUNCIONANDO (2026-06-03)
+- **App online:** **http://159.223.161.106**  (front + API en el mismo origen)
+- **Droplet DigitalOcean:** Ubuntu 24.04, 2 GB RAM, swap 2 GB, firewall ufw
+  (solo SSH/80/443), Docker 29 + Compose v5.
+- **3 contenedores** (`docker-compose.prod.yml`) con `restart: unless-stopped`:
+  `comisiones-web` (nginx, único expuesto :80) · `comisiones-api` (Spring, interno)
+  · `comisiones-db` (Postgres 16, interno, volumen `db-data`).
+- Probado de punta a punta: crear/leer/borrar día OK, cálculo correcto, persiste.
+- **Entrar al server:**
+  `ssh -i C:\Users\tomas\.ssh\digitalocean_comisiones root@159.223.161.106`
+- **DB_PASSWORD:** está en `~/comisiones-backend/.env` del Droplet (NO se commitea).
+
+> ⚠️ **Cómo se subió el código:** los archivos se **COPIARON** (tar+scp) desde la PC,
+> NO se clonó de GitHub. Por eso en el Droplet **NO hay `.git` y `git pull` no anda**
+> todavía. Para actualizar: re-sincronizar desde la PC (tar+scp) o configurar deploy
+> keys y clonar (ver paso 2 de abajo).
+
+### Próximos pasos (al retomar)
+0. **Encender el Droplet** desde el panel de DigitalOcean (se apagó para no gastar
+   crédito). Al prender, Docker arranca solo y los 3 contenedores vuelven solos
+   (`restart: unless-stopped`). Verificar: abrir http://159.223.161.106.
+   - Si no levantan: `ssh ...` → `cd comisiones-backend &&
+     docker compose -f docker-compose.prod.yml up -d`.
+   - **OJO:** al apagar/encender, DigitalOcean **puede cambiar la IP pública**
+     (salvo IP reservada). Si cambió, usar la nueva IP.
+1. **Commitear y pushear** los cambios del backend (quedaron SIN commitear):
+   `docker-compose.prod.yml`, `DEPLOY-digitalocean.md`, `CLAUDE.md`.
+2. **(Opcional) Flujo `git pull` en el Droplet:** generar SSH key en el server,
+   agregarla como deploy key en cada repo, `git clone` ambos lado a lado. Así
+   actualizás con `git pull` + `docker compose -f docker-compose.prod.yml up --build -d`
+   (ver `DEPLOY-digitalocean.md`).
+3. **HTTPS + dominio** (hoy es http://IP): poner Caddy delante (paso 7 de la guía).
+4. **Backups** de Postgres con `pg_dump` (cron) — ver paso 6 de la guía.
 
 ## 1. Qué es
 
@@ -24,15 +55,17 @@ reemplazando un Excel manual (`planilla mayo.xlsx`, en Descargas). Uso de una so
 persona por ahora (multiusuario queda para más adelante).
 
 Debe funcionar en **PC y 100% en el celular** (responsive), estar **24/7 en la nube
-(Oracle Cloud free tier)**.
+(DigitalOcean, crédito GitHub Student)**.
 
 ## 2. Arquitectura
 
 - **Backend** (este repo): Spring Boot 4.0.6, Java 17, Maven. Repo privado propio.
-- **Frontend**: React + Vite. **Repo privado SEPARADO** (todavía no creado).
+- **Frontend nuevo**: `comisiones-front-v2` (React + Vite, SIN Supabase). **Repo
+  privado SEPARADO.** Consume este backend por REST.
 - **DB**: PostgreSQL.
-- **3 contenedores Docker separados**: API, DB, front.
-- Despliegue final en Oracle Cloud.
+- **3 contenedores Docker separados**: `web` (nginx+front), `api`, `db`. En prod
+  nginx sirve el front y hace `proxy_pass /api` → API (mismo origen, sin CORS).
+- Despliegue final en **DigitalOcean** (Droplet + `docker-compose.prod.yml`).
 
 ## 3. Reglas de cálculo (verificadas contra el Excel)
 
@@ -81,7 +114,7 @@ web/dto/ResumenMensualResponse  jornadas del mes + totales
 
 ## 5. Cómo correr (local)
 
-### Con Docker (recomendado — igual que en Oracle)
+### Con Docker (recomendado — igual que en DigitalOcean)
 ```bash
 cp .env.example .env       # completar credenciales (DB_PASSWORD, etc.)
 docker compose up --build  # levanta postgres + api en contenedores separados
@@ -95,8 +128,8 @@ docker compose up --build  # levanta postgres + api en contenedores separados
 ```
 Config por env: `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JPA_DDL`, `CORS_ORIGINS`.
 
-Archivos Docker: `Dockerfile` (multi-stage build+JRE), `docker-compose.yml`,
-`.dockerignore`, `.env.example`.
+Archivos Docker: `Dockerfile` (multi-stage build+JRE), `docker-compose.yml` (dev:
+api+db), `docker-compose.prod.yml` (prod: web+api+db), `.dockerignore`, `.env.example`.
 
 ## 6. Pendiente (roadmap)
 
@@ -111,21 +144,28 @@ Archivos Docker: `Dockerfile` (multi-stage build+JRE), `docker-compose.yml`,
 - [ ] Manejar conflicto de fecha duplicada (unique constraint) -> 409 amigable.
 - [ ] (Más adelante) **multiusuario** + login.
 
-### Frontend (repo separado, NO empezado)
-- [ ] Crear proyecto **React + Vite**, repo privado.
-- [ ] Pantalla de carga del día (entrada/salida/ventas) y vista mensual tipo planilla.
-- [ ] Diseño **responsive / mobile-first**.
-- [ ] Consumir la API; configurar URL del back por env.
-- [ ] Dockerfile (build estático servido por nginx).
+### Frontend nuevo — `comisiones-front-v2` (React + Vite, repo separado)
+- [x] Crear proyecto **React + Vite** (Vite 7, NO 8 por Smart App Control).
+- [x] Pantalla de carga del día (entrada/salida/ventas) y vista mensual.
+- [x] Diseño **responsive / mobile-first** (criterio de animación de Emil Kowalski).
+- [x] Consumir la API por rutas relativas `/api` (proxy en dev, nginx en prod).
+- [x] Dockerfile (build estático servido por nginx + proxy a la API).
+- [x] Subido a repo privado: https://github.com/odbtms/comisiones-front-v2
 
 ### Infra / Deploy
-> Paso a paso detallado en **`DEPLOY-azure.md`**.
-- [ ] Crear los **2 repos privados** (back y front) y subir.
-- [ ] VM **Standard_B1s** en **Azure** (crédito $100 estudiante) con Ubuntu.
-- [x] Contenedores separados (api / db) y red entre ellos (docker-compose).
-- [ ] Front como tercer contenedor.
-- [ ] Volumen persistente para Postgres; backups.
-- [ ] HTTPS / dominio.
+> Paso a paso detallado en **`DEPLOY-digitalocean.md`**.
+- [x] **Backend** subido a repo privado: https://github.com/odbtms/comisiones-back-end
+- [x] `docker-compose.prod.yml` (db + api interna + web nginx con proxy).
+- [x] Subir el repo privado del **front** (`comisiones-front-v2`).
+- [x] **Droplet** en DigitalOcean (Ubuntu 24.04, 2 GB, swap, ufw, Docker 29).
+- [x] Contenedores separados (web / api / db) y red entre ellos (docker-compose).
+- [x] Front como tercer contenedor (nginx que sirve build + proxy `/api`).
+- [x] **Stack levantado y verificado** en el Droplet (http://159.223.161.106).
+- [x] Volumen persistente para Postgres (`db-data`).
+- [ ] **Backups** de Postgres con `pg_dump` (cron) — FALTA.
+- [ ] **Flujo `git pull` en el Droplet** (hoy el código se copió, no se clonó) — FALTA.
+- [ ] **HTTPS / dominio** (Caddy delante, ver guía) — FALTA.
+- [ ] **Commitear** cambios del backend (compose prod + guía + este CLAUDE.md) — FALTA.
 
 ## 7. Decisiones tomadas
 - Horas: cálculo automático entrada/salida con descuento de 1 h si > 8 h. (No hay
