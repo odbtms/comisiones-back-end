@@ -1,0 +1,52 @@
+# Levanta API + PostgreSQL en contenedores SEPARADOS (como en Oracle Cloud).
+# Uso:  docker compose up --build
+# Variables sensibles van en un archivo .env (ver .env.example).
+
+services:
+  db:
+    image: postgres:16
+    container_name: comisiones-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-comisiones}
+      POSTGRES_USER: ${DB_USER:-comisiones}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-comisiones}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-comisiones} -d ${DB_NAME:-comisiones}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - comisiones-net
+    # No publicamos el puerto de la DB hacia afuera: solo la usa la API.
+
+  api:
+    build: .
+    container_name: comisiones-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-comisiones}
+      DB_USER: ${DB_USER:-comisiones}
+      DB_PASSWORD: ${DB_PASSWORD:-comisiones}
+      JPA_DDL: update
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - comisiones-net
+
+volumes:
+  db-data:
+
+networks:
+  comisiones-net:
+    driver: bridge
