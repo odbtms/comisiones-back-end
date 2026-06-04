@@ -52,8 +52,11 @@
    read-only por repo + `~/.ssh/config` (alias `github-backend`/`github-front`),
    los dos dirs convertidos a repos git (`git init` + `reset --hard origin/main`,
    `.env` preservado). `git pull` probado en ambos. Ver bloque ✅ de arriba.
-3. **HTTPS + dominio** (hoy es http://IP): poner Caddy delante (paso 7 de la guía).
+3. **HTTPS + dominio** (hoy es http://IP) — ⚠️ AHORA MÁS URGENTE: con el login,
+   las contraseñas viajan sin cifrar por HTTP. Poner Caddy delante (paso 7 de la guía).
 4. **Backups** de Postgres con `pg_dump` (cron) — ver paso 6 de la guía.
+5. **(login)** Registrá TU cuenta primero (heredás la jornada de prueba existente)
+   antes de compartir la app. Opcional: recuperación de contraseña / verificación email.
 
 ## 1. Qué es
 
@@ -97,27 +100,49 @@ total       = ROUND(pagoBase + comision, 0)
 ```
 domain/Jornada              entidad JPA (un día); guarda solo datos de entrada;
                             unique (usuario_id, fecha)
+domain/Usuario              cuenta (email único, password BCrypt, nombre)
 repository/JornadaRepository  consultas por usuario + rango de fechas
+repository/UsuarioRepository  buscar por email
 service/CalculoComisionService  las fórmulas + regla de colación
 service/Calculo             record con el resultado del cálculo
-service/JornadaService      CRUD + resumenMensual (monousuario = id 1)
-service/JornadaNoEncontradaException
-web/JornadaController       API REST
-web/GlobalExceptionHandler  404 (no encontrada) y 400 (validación)
-web/CorsConfig              CORS para el front
-web/dto/JornadaRequest      entrada del front (con validación)
-web/dto/JornadaResponse     datos + valores calculados
-web/dto/ResumenMensualResponse  jornadas del mes + totales
+service/JornadaService      CRUD + resumenMensual (recibe el usuarioId del token)
+service/AuthService         registro + login (hash BCrypt, emite el JWT)
+service/JornadaNoEncontradaException · EmailYaRegistradoException
+security/SecurityConfig     Spring Security stateless + CORS + 401 JSON
+security/JwtService         firma/valida los JWT (HS256, JJWT)
+security/JwtAuthFilter      lee "Authorization: Bearer" en cada request
+security/AuthUser           principal autenticado (id, email, nombre)
+web/JornadaController       API REST (usa @AuthenticationPrincipal)
+web/AuthController          /api/auth/register · /login · /me
+web/GlobalExceptionHandler  404, 400 (validación), 409 (dup), 401 (credenciales)
+web/dto/JornadaRequest/Response/ResumenMensualResponse
+web/dto/RegisterRequest · LoginRequest · AuthResponse
 ```
 
 ### Endpoints
+**Auth (públicos):**
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/api/auth/register` | crear cuenta (201) → `{token, email, nombre}` |
+| POST | `/api/auth/login` | iniciar sesión → `{token, ...}` (401 si falla) |
+| GET | `/api/auth/me` | datos del usuario del token |
+
+**Jornadas (requieren `Authorization: Bearer <token>`):** cada usuario ve y toca
+solo SUS jornadas (se filtran por el `usuarioId` del token).
 | Método | Ruta | Qué hace |
 |---|---|---|
 | POST | `/api/jornadas` | crear jornada (201) |
-| PUT | `/api/jornadas/{id}` | actualizar |
+| PUT | `/api/jornadas/{id}` | actualizar (404 si no es tuya) |
 | GET | `/api/jornadas/{id}` | obtener una |
 | DELETE | `/api/jornadas/{id}` | borrar (204) |
 | GET | `/api/jornadas/resumen?anio=&mes=` | resumen del mes + totales |
+
+> **Login multiusuario (✅ desplegado 2026-06-03):** registro abierto, login con
+> **email + contraseña** (BCrypt), JWT HS256 (`JWT_SECRET` en `.env`, 7 días).
+> El front guarda el token en localStorage y hace auto-logout en 401.
+> ⚠️ **El primer registro hereda los datos de `usuario_id=1`** (auto-increment).
+> Por eso **registrá TU cuenta primero** antes de pasarle la app a un compañero.
+> ⚠️ **HTTP plano:** el login viaja sin cifrar; activar HTTPS (Caddy) pendiente.
 
 ## 5. Cómo correr (local)
 
@@ -133,7 +158,8 @@ docker compose up --build  # levanta postgres + api en contenedores separados
 ```bash
 ./mvnw spring-boot:run
 ```
-Config por env: `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JPA_DDL`, `CORS_ORIGINS`.
+Config por env: `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JPA_DDL`, `CORS_ORIGINS`,
+`JWT_SECRET` (secreto del login; en dev hay default, en prod va por `.env`).
 
 Archivos Docker: `Dockerfile` (multi-stage build+JRE), `docker-compose.yml` (dev:
 api+db), `docker-compose.prod.yml` (prod: web+api+db), `.dockerignore`, `.env.example`.
@@ -148,8 +174,9 @@ api+db), `docker-compose.prod.yml` (prod: web+api+db), `.dockerignore`, `.env.ex
       el daemon de Docker Desktop estaba apagado al dockerizar.
 - [ ] **Tests** del cálculo (casos del Excel) y del controller.
 - [ ] Revisar si hace falta un endpoint de **listado** sin totales.
-- [ ] Manejar conflicto de fecha duplicada (unique constraint) -> 409 amigable.
-- [ ] (Más adelante) **multiusuario** + login.
+- [x] Manejar conflicto de fecha duplicada (unique constraint) -> 409 amigable.
+- [x] **Multiusuario + login** (Spring Security + JWT, email+password BCrypt).
+      Cada usuario ve solo sus jornadas. Desplegado y verificado 2026-06-03.
 
 ### Frontend nuevo — `comisiones-front-v2` (React + Vite, repo separado)
 - [x] Crear proyecto **React + Vite** (Vite 7, NO 8 por Smart App Control).
@@ -179,4 +206,5 @@ api+db), `docker-compose.prod.yml` (prod: web+api+db), `.dockerignore`, `.env.ex
 - Horas: cálculo automático entrada/salida con descuento de 1 h si > 8 h. (No hay
   carga manual de horas.)
 - Valores derivados no se guardan en la DB.
-- Monousuario por ahora (`usuario_id = 1`), preparado para multiusuario.
+- **Multiusuario con login** (email + contraseña, JWT). Cada usuario ve solo sus
+  jornadas. Registro abierto. HTTPS pendiente (hoy el login va por HTTP plano).
