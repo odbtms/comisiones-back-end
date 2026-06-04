@@ -42,6 +42,8 @@ services:
       DB_USER: ${DB_USER:-comisiones}
       DB_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD en .env}
       JPA_DDL: update
+      # Secreto para firmar los JWT del login (largo, >= 32 bytes). En .env.
+      JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET en .env}
       # Mismo origen (nginx hace el proxy), así que CORS no aplica en prod.
       # Se deja restrictivo por las dudas.
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}

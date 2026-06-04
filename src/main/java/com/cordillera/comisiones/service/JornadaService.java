@@ -17,9 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class JornadaService {
 
-    /** Mientras sea monousuario, todo pertenece al usuario 1. */
-    private static final Long USUARIO_ACTUAL = 1L;
-
     private final JornadaRepository repo;
     private final CalculoComisionService calculo;
     private final BigDecimal valorHoraDefault;
@@ -33,42 +30,42 @@ public class JornadaService {
         this.valorHoraDefault = valorHoraDefault;
     }
 
-    public JornadaResponse crear(JornadaRequest req) {
+    public JornadaResponse crear(Long usuarioId, JornadaRequest req) {
         Jornada j = new Jornada();
-        j.setUsuarioId(USUARIO_ACTUAL);
+        j.setUsuarioId(usuarioId);
         aplicar(j, req);
         return aResponse(repo.save(j));
     }
 
-    public JornadaResponse actualizar(Long id, JornadaRequest req) {
-        Jornada j = repo.findById(id)
+    public JornadaResponse actualizar(Long usuarioId, Long id, JornadaRequest req) {
+        Jornada j = repo.findByIdAndUsuarioId(id, usuarioId)
             .orElseThrow(() -> new JornadaNoEncontradaException(id));
         aplicar(j, req);
         return aResponse(repo.save(j));
     }
 
-    public void eliminar(Long id) {
-        if (!repo.existsById(id)) {
+    public void eliminar(Long usuarioId, Long id) {
+        if (!repo.existsByIdAndUsuarioId(id, usuarioId)) {
             throw new JornadaNoEncontradaException(id);
         }
         repo.deleteById(id);
     }
 
     @Transactional(readOnly = true)
-    public JornadaResponse obtener(Long id) {
-        return repo.findById(id)
+    public JornadaResponse obtener(Long usuarioId, Long id) {
+        return repo.findByIdAndUsuarioId(id, usuarioId)
             .map(this::aResponse)
             .orElseThrow(() -> new JornadaNoEncontradaException(id));
     }
 
     @Transactional(readOnly = true)
-    public ResumenMensualResponse resumenMensual(int anio, int mes) {
+    public ResumenMensualResponse resumenMensual(Long usuarioId, int anio, int mes) {
         YearMonth ym = YearMonth.of(anio, mes);
         LocalDate desde = ym.atDay(1);
         LocalDate hasta = ym.atEndOfMonth();
 
         List<JornadaResponse> jornadas = repo
-            .findByUsuarioIdAndFechaBetweenOrderByFecha(USUARIO_ACTUAL, desde, hasta)
+            .findByUsuarioIdAndFechaBetweenOrderByFecha(usuarioId, desde, hasta)
             .stream()
             .map(this::aResponse)
             .toList();

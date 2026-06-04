@@ -12,4 +12,9 @@ public interface JornadaRepository extends JpaRepository<Jornada, Long> {
         Long usuarioId, LocalDate desde, LocalDate hasta);
 
     Optional<Jornada> findByUsuarioIdAndFecha(Long usuarioId, LocalDate fecha);
+
+    /** Busca una jornada solo si pertenece al usuario (evita tocar la de otro). */
+    Optional<Jornada> findByIdAndUsuarioId(Long id, Long usuarioId);
+
+    boolean existsByIdAndUsuarioId(Long id, Long usuarioId);
 }
