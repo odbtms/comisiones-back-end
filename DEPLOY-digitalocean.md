@@ -156,6 +156,68 @@ Lo más simple es poner **Caddy** adelante (saca el certificado de Let's Encrypt
 
 ---
 
+## Flujo `git pull` en el Droplet (✅ configurado 2026-06-03)
+
+En vez de copiar archivos a mano (tar+scp), los dos dirs del Droplet
+(`~/comisiones-backend` y `~/comisiones-front-v2`) son **repos git** conectados a
+GitHub con **deploy keys read-only** (una por repo: GitHub no deja reusar la misma
+deploy key en dos repos).
+
+### Cómo quedó montado (no hace falta repetir, queda como referencia)
+1. **Dos deploy keys** en `~/.ssh` del Droplet, sin passphrase:
+   ```bash
+   ssh-keygen -t ed25519 -N "" -C "deploy-backend@droplet" -f ~/.ssh/deploy_backend
+   ssh-keygen -t ed25519 -N "" -C "deploy-front@droplet"   -f ~/.ssh/deploy_front
+   ```
+   La `.pub` de cada una se agregó en **Settings → Deploy keys** del repo
+   correspondiente (sin "Allow write access").
+2. **`~/.ssh/config`** con un alias por repo (para que cada uno use su llave):
+   ```
+   Host github-backend
+       HostName github.com
+       User git
+       IdentityFile ~/.ssh/deploy_backend
+       IdentitiesOnly yes
+   Host github-front
+       HostName github.com
+       User git
+       IdentityFile ~/.ssh/deploy_front
+       IdentitiesOnly yes
+   ```
+3. **Convertir cada dir copiado en repo git** sin perder el `.env` (que es untracked):
+   ```bash
+   # los dirs venían con dueño de Windows (del tar); git como root los rechaza:
+   chown -R root:root ~/comisiones-backend ~/comisiones-front-v2
+   git config --global --add safe.directory /root/comisiones-backend
+   git config --global --add safe.directory /root/comisiones-front-v2
+
+   cd ~/comisiones-backend
+   git init -b main
+   git remote add origin git@github-backend:odbtms/comisiones-back-end.git
+   git fetch --depth=1 origin main
+   git reset --hard origin/main          # NO toca el .env (untracked)
+   git branch --set-upstream-to=origin/main main
+
+   cd ~/comisiones-front-v2
+   git init -b main
+   git remote add origin git@github-front:odbtms/comisiones-front-v2.git
+   git fetch --depth=1 origin main
+   git reset --hard origin/main
+   git branch --set-upstream-to=origin/main main
+   ```
+
+### Actualizar la app de ahora en más
+```bash
+ssh -i C:\Users\tomas\.ssh\digitalocean_comisiones root@159.223.161.106
+cd ~/comisiones-backend  && git pull
+cd ~/comisiones-front-v2 && git pull
+# rebuild solo lo que cambió y relevantar:
+cd ~/comisiones-backend
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+---
+
 ## Notas
 - La API **no** publica su puerto: solo nginx la alcanza por la red interna del compose.
 - Postgres tampoco se expone. Si querés conectarte con un cliente, hacelo por túnel SSH.

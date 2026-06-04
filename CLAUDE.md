@@ -26,10 +26,17 @@
   `ssh -i C:\Users\tomas\.ssh\digitalocean_comisiones root@159.223.161.106`
 - **DB_PASSWORD:** está en `~/comisiones-backend/.env` del Droplet (NO se commitea).
 
-> ⚠️ **Cómo se subió el código:** los archivos se **COPIARON** (tar+scp) desde la PC,
-> NO se clonó de GitHub. Por eso en el Droplet **NO hay `.git` y `git pull` no anda**
-> todavía. Para actualizar: re-sincronizar desde la PC (tar+scp) o configurar deploy
-> keys y clonar (ver paso 2 de abajo).
+> ✅ **Actualizar el código en el Droplet (flujo `git pull` ya configurado, 2026-06-03):**
+> los dos dirs (`~/comisiones-backend` y `~/comisiones-front-v2`) **ya son repos git**
+> conectados a GitHub vía **deploy keys read-only** (una por repo) + alias en
+> `~/.ssh/config` (`github-backend`, `github-front`). Para actualizar:
+> ```bash
+> ssh -i C:\Users\tomas\.ssh\digitalocean_comisiones root@159.223.161.106
+> cd ~/comisiones-backend && git pull        # y/o ~/comisiones-front-v2
+> cd ~/comisiones-backend && docker compose -f docker-compose.prod.yml up --build -d
+> ```
+> El `.env` (con DB_PASSWORD) es **untracked**, así que `git pull`/`reset` NO lo tocan.
+> Detalle completo en `DEPLOY-digitalocean.md`.
 
 ### Próximos pasos (al retomar)
 0. **Encender el Droplet** desde el panel de DigitalOcean (se apagó para no gastar
@@ -41,10 +48,10 @@
      (salvo IP reservada). Si cambió, usar la nueva IP.
 1. ~~**Commitear y pushear** los cambios del backend~~ ✅ HECHO (2026-06-03,
    commit `2af8c30`): `docker-compose.prod.yml`, `DEPLOY-digitalocean.md`, `CLAUDE.md`.
-2. **(Opcional) Flujo `git pull` en el Droplet:** generar SSH key en el server,
-   agregarla como deploy key en cada repo, `git clone` ambos lado a lado. Así
-   actualizás con `git pull` + `docker compose -f docker-compose.prod.yml up --build -d`
-   (ver `DEPLOY-digitalocean.md`).
+2. ~~**Flujo `git pull` en el Droplet**~~ ✅ HECHO (2026-06-03): deploy keys
+   read-only por repo + `~/.ssh/config` (alias `github-backend`/`github-front`),
+   los dos dirs convertidos a repos git (`git init` + `reset --hard origin/main`,
+   `.env` preservado). `git pull` probado en ambos. Ver bloque ✅ de arriba.
 3. **HTTPS + dominio** (hoy es http://IP): poner Caddy delante (paso 7 de la guía).
 4. **Backups** de Postgres con `pg_dump` (cron) — ver paso 6 de la guía.
 
@@ -163,7 +170,8 @@ api+db), `docker-compose.prod.yml` (prod: web+api+db), `.dockerignore`, `.env.ex
 - [x] **Stack levantado y verificado** en el Droplet (http://159.223.161.106).
 - [x] Volumen persistente para Postgres (`db-data`).
 - [ ] **Backups** de Postgres con `pg_dump` (cron) — FALTA.
-- [ ] **Flujo `git pull` en el Droplet** (hoy el código se copió, no se clonó) — FALTA.
+- [x] **Flujo `git pull` en el Droplet** — deploy keys + `~/.ssh/config` + repos git
+      (2026-06-03). Actualizar: `git pull` y `docker compose -f docker-compose.prod.yml up --build -d`.
 - [ ] **HTTPS / dominio** (Caddy delante, ver guía) — FALTA.
 - [x] **Commitear** cambios del backend (compose prod + guía + este CLAUDE.md) — commit `2af8c30`.
 
