@@ -129,7 +129,14 @@ docker exec comisiones-db pg_dump -U comisiones comisiones > ~/backup-$(date +%F
 
 ---
 
-## 7. Dominio + HTTPS (cuando quieras)
+## 7. Dominio + HTTPS (✅ HECHO 2026-06-06)
+
+> **Estado:** activo en **https://comisiones.me**. Dominio `comisiones.me` (Namecheap,
+> gratis 1 año vía GitHub Student Pack) + **IP reservada** DigitalOcean `161.35.252.133`
+> (registro A `@` → esa IP; CNAME `www` → `comisiones.me`). **Caddy** delante de nginx
+> saca y renueva el cert de Let's Encrypt solo. Config real: ver `Caddyfile` y el
+> servicio `caddy` en `docker-compose.prod.yml`. Lo de abajo queda como referencia.
+
 Lo más simple es poner **Caddy** adelante (saca el certificado de Let's Encrypt solo):
 
 1. Apuntá un dominio (o subdominio) a la IP del Droplet (registro A).

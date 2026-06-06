@@ -14,16 +14,21 @@
 - backend: https://github.com/odbtms/comisiones-back-end (privado)
 - front nuevo: https://github.com/odbtms/comisiones-front-v2 (privado, ya subido)
 
-### ✅ DESPLEGADO Y FUNCIONANDO (2026-06-03)
-- **App online:** **http://159.223.161.106**  (front + API en el mismo origen)
+### ✅ DESPLEGADO Y FUNCIONANDO (HTTPS desde 2026-06-06)
+- **App online:** **https://comisiones.me**  🔒 (front + API en el mismo origen, HTTPS)
+  - `http://` redirige a `https://`; `www.comisiones.me` redirige al dominio raíz.
+  - Dominio `comisiones.me` (Namecheap, gratis 1 año vía GitHub Student Pack).
+- **IP reservada:** **`161.35.252.133`** (fija, NO cambia al apagar/encender el Droplet).
+  El registro A de `comisiones.me` apunta a esta IP.
 - **Droplet DigitalOcean:** Ubuntu 24.04, 2 GB RAM, swap 2 GB, firewall ufw
   (solo SSH/80/443), Docker 29 + Compose v5.
-- **3 contenedores** (`docker-compose.prod.yml`) con `restart: unless-stopped`:
-  `comisiones-web` (nginx, único expuesto :80) · `comisiones-api` (Spring, interno)
-  · `comisiones-db` (Postgres 16, interno, volumen `db-data`).
-- Probado de punta a punta: crear/leer/borrar día OK, cálculo correcto, persiste.
+- **4 contenedores** (`docker-compose.prod.yml`) con `restart: unless-stopped`:
+  `comisiones-caddy` (HTTPS, único expuesto :80/:443) · `comisiones-web` (nginx, interno)
+  · `comisiones-api` (Spring, interno) · `comisiones-db` (Postgres 16, interno, volumen `db-data`).
+  - Caddy saca/renueva el cert de Let's Encrypt solo (volúmenes `caddy-data`/`caddy-config`).
+- Probado de punta a punta: crear/leer/borrar día OK, cálculo correcto, persiste. HTTPS verificado.
 - **Entrar al server:**
-  `ssh -i C:\Users\tomas\.ssh\digitalocean_comisiones root@159.223.161.106`
+  `ssh -i C:\Users\tomas\.ssh\digitalocean_comisiones root@161.35.252.133`
 - **DB_PASSWORD:** está en `~/comisiones-backend/.env` del Droplet (NO se commitea).
 
 > ✅ **Actualizar el código en el Droplet (flujo `git pull` ya configurado, 2026-06-03):**
@@ -31,7 +36,7 @@
 > conectados a GitHub vía **deploy keys read-only** (una por repo) + alias en
 > `~/.ssh/config` (`github-backend`, `github-front`). Para actualizar:
 > ```bash
-> ssh -i C:\Users\tomas\.ssh\digitalocean_comisiones root@159.223.161.106
+> ssh -i C:\Users\tomas\.ssh\digitalocean_comisiones root@161.35.252.133
 > cd ~/comisiones-backend && git pull        # y/o ~/comisiones-front-v2
 > cd ~/comisiones-backend && docker compose -f docker-compose.prod.yml up --build -d
 > ```
@@ -40,21 +45,22 @@
 
 ### Próximos pasos (al retomar)
 0. **Encender el Droplet** desde el panel de DigitalOcean (se apagó para no gastar
-   crédito). Al prender, Docker arranca solo y los 3 contenedores vuelven solos
-   (`restart: unless-stopped`). Verificar: abrir http://159.223.161.106.
+   crédito). Al prender, Docker arranca solo y los 4 contenedores vuelven solos
+   (`restart: unless-stopped`). Verificar: abrir https://comisiones.me.
    - Si no levantan: `ssh ...` → `cd comisiones-backend &&
      docker compose -f docker-compose.prod.yml up -d`.
-   - **OJO:** al apagar/encender, DigitalOcean **puede cambiar la IP pública**
-     (salvo IP reservada). Si cambió, usar la nueva IP.
+   - Con **IP reservada** (`161.35.252.133`) la IP ya NO cambia al apagar/encender,
+     así que el dominio sigue resolviendo siempre.
 1. ~~**Commitear y pushear** los cambios del backend~~ ✅ HECHO (2026-06-03,
    commit `2af8c30`): `docker-compose.prod.yml`, `DEPLOY-digitalocean.md`, `CLAUDE.md`.
 2. ~~**Flujo `git pull` en el Droplet**~~ ✅ HECHO (2026-06-03): deploy keys
    read-only por repo + `~/.ssh/config` (alias `github-backend`/`github-front`),
    los dos dirs convertidos a repos git (`git init` + `reset --hard origin/main`,
    `.env` preservado). `git pull` probado en ambos. Ver bloque ✅ de arriba.
-3. **HTTPS + dominio** (hoy es http://IP) — ⚠️ AHORA MÁS URGENTE: con el login,
-   las contraseñas viajan sin cifrar por HTTP. Poner Caddy delante (paso 7 de la guía).
-4. **Backups** de Postgres con `pg_dump` (cron) — ver paso 6 de la guía.
+3. ~~**HTTPS + dominio**~~ ✅ HECHO (2026-06-06): IP reservada `161.35.252.133` +
+   dominio `comisiones.me` (Namecheap/Student Pack) + **Caddy** delante de nginx
+   sacando el cert de Let's Encrypt solo. El login ya viaja cifrado. Ver `Caddyfile`.
+4. **Backups** de Postgres con `pg_dump` (cron) — ver paso 6 de la guía. ⚠️ FALTA (lo más urgente ahora).
 5. **(login)** Registrá TU cuenta primero (heredás la jornada de prueba existente)
    antes de compartir la app. Opcional: recuperación de contraseña / verificación email.
 
@@ -142,7 +148,7 @@ solo SUS jornadas (se filtran por el `usuarioId` del token).
 > El front guarda el token en localStorage y hace auto-logout en 401.
 > ⚠️ **El primer registro hereda los datos de `usuario_id=1`** (auto-increment).
 > Por eso **registrá TU cuenta primero** antes de pasarle la app a un compañero.
-> ⚠️ **HTTP plano:** el login viaja sin cifrar; activar HTTPS (Caddy) pendiente.
+> ✅ **HTTPS activo** (Caddy + Let's Encrypt, 2026-06-06): el login ya viaja cifrado.
 
 ## 5. Cómo correr (local)
 
@@ -194,12 +200,14 @@ api+db), `docker-compose.prod.yml` (prod: web+api+db), `.dockerignore`, `.env.ex
 - [x] **Droplet** en DigitalOcean (Ubuntu 24.04, 2 GB, swap, ufw, Docker 29).
 - [x] Contenedores separados (web / api / db) y red entre ellos (docker-compose).
 - [x] Front como tercer contenedor (nginx que sirve build + proxy `/api`).
-- [x] **Stack levantado y verificado** en el Droplet (http://159.223.161.106).
+- [x] **Stack levantado y verificado** en el Droplet (https://comisiones.me).
 - [x] Volumen persistente para Postgres (`db-data`).
-- [ ] **Backups** de Postgres con `pg_dump` (cron) — FALTA.
+- [ ] **Backups** de Postgres con `pg_dump` (cron) — FALTA (lo más urgente ahora).
 - [x] **Flujo `git pull` en el Droplet** — deploy keys + `~/.ssh/config` + repos git
       (2026-06-03). Actualizar: `git pull` y `docker compose -f docker-compose.prod.yml up --build -d`.
-- [ ] **HTTPS / dominio** (Caddy delante, ver guía) — FALTA.
+- [x] **IP reservada** DigitalOcean (`161.35.252.133`) — IP fija que no cambia al reiniciar (2026-06-06).
+- [x] **HTTPS / dominio** — dominio `comisiones.me` (Namecheap/Student Pack) + **Caddy** delante
+      de nginx con cert Let's Encrypt auto-renovable (2026-06-06). Ver `Caddyfile`.
 - [x] **Commitear** cambios del backend (compose prod + guía + este CLAUDE.md) — commit `2af8c30`.
 
 ## 7. Decisiones tomadas
@@ -207,4 +215,4 @@ api+db), `docker-compose.prod.yml` (prod: web+api+db), `.dockerignore`, `.env.ex
   carga manual de horas.)
 - Valores derivados no se guardan en la DB.
 - **Multiusuario con login** (email + contraseña, JWT). Cada usuario ve solo sus
-  jornadas. Registro abierto. HTTPS pendiente (hoy el login va por HTTP plano).
+  jornadas. Registro abierto. HTTPS activo (Caddy + Let's Encrypt en `comisiones.me`).
