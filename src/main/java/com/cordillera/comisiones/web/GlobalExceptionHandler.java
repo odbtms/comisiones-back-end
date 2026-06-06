@@ -1,5 +1,6 @@
 package com.cordillera.comisiones.web;
 
+import com.cordillera.comisiones.service.AccesoDenegadoException;
 import com.cordillera.comisiones.service.EmailYaRegistradoException;
 import com.cordillera.comisiones.service.JornadaNoEncontradaException;
 import java.time.Instant;
@@ -44,6 +45,14 @@ public class GlobalExceptionHandler {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(
             HttpStatus.UNAUTHORIZED, "Email o contrasena incorrectos.");
         pd.setTitle("Credenciales invalidas");
+        return pd;
+    }
+
+    @ExceptionHandler(AccesoDenegadoException.class)
+    public ProblemDetail accesoDenegado(AccesoDenegadoException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(
+            HttpStatus.FORBIDDEN, ex.getMessage());
+        pd.setTitle("Acceso denegado");
         return pd;
     }
 

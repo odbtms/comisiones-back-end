@@ -56,7 +56,7 @@ public class AuthService {
     }
 
     private AuthResponse aResponse(Usuario u) {
-        return new AuthResponse(jwt.generar(u), u.getEmail(), u.getNombre());
+        return new AuthResponse(u.getId(), jwt.generar(u), u.getEmail(), u.getNombre());
     }
 
     private String normalizar(String email) {

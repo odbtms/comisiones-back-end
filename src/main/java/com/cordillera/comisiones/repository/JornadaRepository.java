@@ -11,6 +11,9 @@ public interface JornadaRepository extends JpaRepository<Jornada, Long> {
     List<Jornada> findByUsuarioIdAndFechaBetweenOrderByFecha(
         Long usuarioId, LocalDate desde, LocalDate hasta);
 
+    /** Todas las jornadas de un usuario (para estadisticas del panel admin). */
+    List<Jornada> findByUsuarioId(Long usuarioId);
+
     Optional<Jornada> findByUsuarioIdAndFecha(Long usuarioId, LocalDate fecha);
 
     /** Busca una jornada solo si pertenece al usuario (evita tocar la de otro). */
