@@ -150,6 +150,16 @@ solo SUS jornadas (se filtran por el `usuarioId` del token).
 > Por eso **registrá TU cuenta primero** antes de pasarle la app a un compañero.
 > ✅ **HTTPS activo** (Caddy + Let's Encrypt, 2026-06-06): el login ya viaja cifrado.
 
+> ⚠️ **GOTCHA CORS (resuelto 2026-06-06):** aunque front y API comparten origen
+> (nginx hace el proxy), el navegador **igual manda el header `Origin` en los POST**
+> (login, etc.). Si `CORS_ORIGINS` no incluye el dominio real, Spring Security
+> responde **`403 "Invalid CORS request"`** en el preflight `OPTIONS` y el login
+> falla (NO es pérdida de datos). **`CORS_ORIGINS` debe coincidir con el dominio
+> servido.** En el `.env` del Droplet está como
+> `CORS_ORIGINS=https://comisiones.me,https://www.comisiones.me`. **Si algún día
+> cambia el dominio, actualizá esta variable** (en `.env`, untracked) y recreá el
+> api: `docker compose -f docker-compose.prod.yml up -d api`.
+
 ## 5. Cómo correr (local)
 
 ### Con Docker (recomendado — igual que en DigitalOcean)

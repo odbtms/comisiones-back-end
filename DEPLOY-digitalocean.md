@@ -136,6 +136,11 @@ docker exec comisiones-db pg_dump -U comisiones comisiones > ~/backup-$(date +%F
 > (registro A `@` → esa IP; CNAME `www` → `comisiones.me`). **Caddy** delante de nginx
 > saca y renueva el cert de Let's Encrypt solo. Config real: ver `Caddyfile` y el
 > servicio `caddy` en `docker-compose.prod.yml`. Lo de abajo queda como referencia.
+>
+> ⚠️ **Al poner un dominio, actualizá `CORS_ORIGINS` en el `.env`** para que coincida
+> (`CORS_ORIGINS=https://tu-dominio`). Aunque front y API compartan origen, el navegador
+> manda el header `Origin` en los POST; si no coincide, el login da `403 "Invalid CORS
+> request"`. Tras cambiarlo: `docker compose -f docker-compose.prod.yml up -d api`.
 
 Lo más simple es poner **Caddy** adelante (saca el certificado de Let's Encrypt solo):
 
