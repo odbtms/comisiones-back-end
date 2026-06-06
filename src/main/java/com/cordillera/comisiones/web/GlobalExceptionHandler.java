@@ -1,8 +1,11 @@
 package com.cordillera.comisiones.web;
 
 import com.cordillera.comisiones.service.AccesoDenegadoException;
+import com.cordillera.comisiones.service.EmailInvalidoException;
 import com.cordillera.comisiones.service.EmailYaRegistradoException;
 import com.cordillera.comisiones.service.JornadaNoEncontradaException;
+import com.cordillera.comisiones.service.OperacionNoPermitidaException;
+import com.cordillera.comisiones.service.UsuarioNoEncontradoException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -53,6 +56,30 @@ public class GlobalExceptionHandler {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(
             HttpStatus.FORBIDDEN, ex.getMessage());
         pd.setTitle("Acceso denegado");
+        return pd;
+    }
+
+    @ExceptionHandler(UsuarioNoEncontradoException.class)
+    public ProblemDetail usuarioNoEncontrado(UsuarioNoEncontradoException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(
+            HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Usuario no encontrado");
+        return pd;
+    }
+
+    @ExceptionHandler(OperacionNoPermitidaException.class)
+    public ProblemDetail operacionNoPermitida(OperacionNoPermitidaException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(
+            HttpStatus.BAD_REQUEST, ex.getMessage());
+        pd.setTitle("Operacion no permitida");
+        return pd;
+    }
+
+    @ExceptionHandler(EmailInvalidoException.class)
+    public ProblemDetail emailInvalido(EmailInvalidoException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(
+            HttpStatus.BAD_REQUEST, ex.getMessage());
+        pd.setTitle("Email invalido");
         return pd;
     }
 

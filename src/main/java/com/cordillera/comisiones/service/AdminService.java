@@ -56,6 +56,27 @@ public class AdminService {
             .toList();
     }
 
+    /**
+     * Elimina un usuario y todas sus jornadas. Solo el admin puede; ademas no
+     * puede eliminar SU PROPIA cuenta admin (evita quedarse sin acceso y perder
+     * los datos heredados). Borra primero las jornadas (no hay cascade en la DB).
+     */
+    @Transactional
+    public void eliminarUsuario(Long solicitanteId, Long objetivoId) {
+        if (!esAdmin(solicitanteId)) {
+            throw new AccesoDenegadoException();
+        }
+        if (esAdmin(objetivoId)) {
+            throw new OperacionNoPermitidaException(
+                "No podes eliminar la cuenta de administrador.");
+        }
+        if (!usuarios.existsById(objetivoId)) {
+            throw new UsuarioNoEncontradoException(objetivoId);
+        }
+        jornadas.deleteByUsuarioId(objetivoId);
+        usuarios.deleteById(objetivoId);
+    }
+
     private AdminUsuarioResponse aResponse(Usuario u) {
         List<Jornada> js = jornadas.findByUsuarioId(u.getId());
 

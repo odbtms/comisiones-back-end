@@ -21,16 +21,22 @@ public class AuthService {
     private final UsuarioRepository repo;
     private final PasswordEncoder encoder;
     private final JwtService jwt;
+    private final EmailDominioValidador dominioValidador;
 
     public AuthService(
-        UsuarioRepository repo, PasswordEncoder encoder, JwtService jwt) {
+        UsuarioRepository repo, PasswordEncoder encoder, JwtService jwt,
+        EmailDominioValidador dominioValidador) {
         this.repo = repo;
         this.encoder = encoder;
         this.jwt = jwt;
+        this.dominioValidador = dominioValidador;
     }
 
     public AuthResponse registrar(RegisterRequest req) {
         String email = normalizar(req.email());
+        if (!dominioValidador.dominioPuedeRecibirMail(email)) {
+            throw new EmailInvalidoException();
+        }
         if (repo.existsByEmail(email)) {
             throw new EmailYaRegistradoException(email);
         }
