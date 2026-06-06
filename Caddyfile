@@ -1,0 +1,13 @@
+# Caddy: reverse proxy con HTTPS automatico (Let's Encrypt).
+# Saca y renueva el certificado solo para comisiones.me y www.comisiones.me.
+# Reenvia todo al contenedor nginx (web), que sirve el front y hace proxy /api -> api.
+
+# www redirige al dominio raiz (canonico, una sola URL).
+www.comisiones.me {
+    redir https://comisiones.me{uri} permanent
+}
+
+comisiones.me {
+    encode gzip
+    reverse_proxy web:80
+}
