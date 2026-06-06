@@ -115,25 +115,38 @@ service/CalculoComisionService  las fórmulas + regla de colación
 service/Calculo             record con el resultado del cálculo
 service/JornadaService      CRUD + resumenMensual (recibe el usuarioId del token)
 service/AuthService         registro + login (hash BCrypt, emite el JWT)
-service/JornadaNoEncontradaException · EmailYaRegistradoException
+service/AdminService        panel admin: lista usuarios + stats (solo usuario admin)
+service/JornadaNoEncontradaException · EmailYaRegistradoException · AccesoDenegadoException
 security/SecurityConfig     Spring Security stateless + CORS + 401 JSON
 security/JwtService         firma/valida los JWT (HS256, JJWT)
 security/JwtAuthFilter      lee "Authorization: Bearer" en cada request
 security/AuthUser           principal autenticado (id, email, nombre)
 web/JornadaController       API REST (usa @AuthenticationPrincipal)
 web/AuthController          /api/auth/register · /login · /me
-web/GlobalExceptionHandler  404, 400 (validación), 409 (dup), 401 (credenciales)
+web/AdminController         /api/admin/usuarios (403 si no es admin)
+web/GlobalExceptionHandler  404, 400 (validación), 409 (dup), 401, 403 (no admin)
 web/dto/JornadaRequest/Response/ResumenMensualResponse
-web/dto/RegisterRequest · LoginRequest · AuthResponse
+web/dto/RegisterRequest · LoginRequest · AuthResponse (incluye id) · AdminUsuarioResponse
 ```
 
 ### Endpoints
 **Auth (públicos):**
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/api/auth/register` | crear cuenta (201) → `{token, email, nombre}` |
-| POST | `/api/auth/login` | iniciar sesión → `{token, ...}` (401 si falla) |
-| GET | `/api/auth/me` | datos del usuario del token |
+| POST | `/api/auth/register` | crear cuenta (201) → `{id, token, email, nombre}` |
+| POST | `/api/auth/login` | iniciar sesión → `{id, token, ...}` (401 si falla) |
+| GET | `/api/auth/me` | datos del usuario del token (`{id, email, nombre}`) |
+
+**Admin (requiere token; solo el usuario admin, id 1 por defecto):**
+| Método | Ruta | Qué hace |
+|---|---|---|
+| GET | `/api/admin/usuarios` | lista usuarios + stats (jornadas, total acum., última fecha). 403 si no es admin |
+
+> **Panel admin (✅ desplegado 2026-06-06):** el usuario admin (id 1, configurable
+> con `app.admin.usuario-id`) ve en su perfil un apartado "Administración" con la
+> lista de usuarios y sus estadísticas. La autorización la valida `AdminService`
+> (403 vía `AccesoDenegadoException`); el front muestra el botón solo si el `id` del
+> token es el admin. Solo lectura por ahora (no edita ni borra usuarios).
 
 **Jornadas (requieren `Authorization: Bearer <token>`):** cada usuario ve y toca
 solo SUS jornadas (se filtran por el `usuarioId` del token).
