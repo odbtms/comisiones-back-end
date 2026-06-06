@@ -120,12 +120,22 @@ docker compose -f docker-compose.prod.yml up --build -d
 
 ---
 
-## 6. Backups de la base
-El volumen `db-data` persiste los datos aunque recrees los contenedores.
-Dump periódico (cron):
-```bash
-docker exec comisiones-db pg_dump -U comisiones comisiones > ~/backup-$(date +%F).sql
-```
+## 6. Backups de la base (✅ HECHO 2026-06-06)
+El volumen `db-data` persiste los datos aunque recrees los contenedores, pero **eso
+no es un backup**. Hay un script con rotación + cron diario:
+
+- **Script:** `backup-db.sh` (en el repo). `pg_dump` comprimido a
+  `~/comisiones-backups/comisiones-FECHA.sql.gz`, conserva los **últimos 7**, borra
+  los viejos. Un dump pesa ~1–4 KB (la base entera ~7 MB), no satura nada.
+- **Cron:** diario 03:30 →
+  `30 3 * * * /root/comisiones-backend/backup-db.sh >> /root/comisiones-backups/backup.log 2>&1`
+- **Restore** (idealmente sobre base vacía):
+  ```bash
+  gunzip -c ~/comisiones-backups/comisiones-FECHA.sql.gz \
+    | docker exec -i comisiones-db psql -U comisiones -d comisiones
+  ```
+- **Off-site (gratis):** bajá copias a tu PC cada tanto con `scp` (ver CLAUDE.md,
+  bloque "Backups"). Así cubrís incluso la pérdida total del Droplet.
 
 ---
 

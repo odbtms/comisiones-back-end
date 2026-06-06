@@ -60,7 +60,9 @@
 3. ~~**HTTPS + dominio**~~ ✅ HECHO (2026-06-06): IP reservada `161.35.252.133` +
    dominio `comisiones.me` (Namecheap/Student Pack) + **Caddy** delante de nginx
    sacando el cert de Let's Encrypt solo. El login ya viaja cifrado. Ver `Caddyfile`.
-4. **Backups** de Postgres con `pg_dump` (cron) — ver paso 6 de la guía. ⚠️ FALTA (lo más urgente ahora).
+4. ~~**Backups** de Postgres con `pg_dump` (cron)~~ ✅ HECHO (2026-06-06): `backup-db.sh`
+   + cron diario 03:30 en el Droplet, dump comprimido a `~/comisiones-backups`, rota
+   y conserva los últimos 7. Restore/descarga abajo. (Opcional: bajarte copias a tu PC.)
 5. **(login)** Registrá TU cuenta primero (heredás la jornada de prueba existente)
    antes de compartir la app. Opcional: recuperación de contraseña / verificación email.
 
@@ -212,13 +214,34 @@ api+db), `docker-compose.prod.yml` (prod: web+api+db), `.dockerignore`, `.env.ex
 - [x] Front como tercer contenedor (nginx que sirve build + proxy `/api`).
 - [x] **Stack levantado y verificado** en el Droplet (https://comisiones.me).
 - [x] Volumen persistente para Postgres (`db-data`).
-- [ ] **Backups** de Postgres con `pg_dump` (cron) — FALTA (lo más urgente ahora).
+- [x] **Backups** de Postgres — `backup-db.sh` + cron diario 03:30, dump comprimido
+      a `~/comisiones-backups`, rotación de 7 días (2026-06-06). Ver bloque "Backups" abajo.
 - [x] **Flujo `git pull` en el Droplet** — deploy keys + `~/.ssh/config` + repos git
       (2026-06-03). Actualizar: `git pull` y `docker compose -f docker-compose.prod.yml up --build -d`.
 - [x] **IP reservada** DigitalOcean (`161.35.252.133`) — IP fija que no cambia al reiniciar (2026-06-06).
 - [x] **HTTPS / dominio** — dominio `comisiones.me` (Namecheap/Student Pack) + **Caddy** delante
       de nginx con cert Let's Encrypt auto-renovable (2026-06-06). Ver `Caddyfile`.
 - [x] **Commitear** cambios del backend (compose prod + guía + este CLAUDE.md) — commit `2af8c30`.
+
+### Backups (✅ 2026-06-06)
+- **Script:** `backup-db.sh` (en el repo y en `~/comisiones-backend` del Droplet).
+  Hace `pg_dump` comprimido a `~/comisiones-backups/comisiones-FECHA.sql.gz`,
+  conserva los **últimos 7** y borra los viejos (rotación). Un dump pesa ~1–4 KB.
+- **Cron:** diario a las **03:30** (hora del server). Log en `~/comisiones-backups/backup.log`.
+  Ver: `crontab -l`. Correr a mano: `~/comisiones-backend/backup-db.sh`.
+- **Restaurar** un backup (⚠️ sobre una base vacía/recién creada idealmente):
+  ```bash
+  gunzip -c ~/comisiones-backups/comisiones-FECHA.sql.gz \
+    | docker exec -i comisiones-db psql -U comisiones -d comisiones
+  ```
+- **Bajar copias a tu PC** (off-site, gratis) desde PowerShell en Windows:
+  ```powershell
+  scp -i C:\Users\tomas\.ssh\digitalocean_comisiones `
+    root@161.35.252.133:/root/comisiones-backups/comisiones-*.sql.gz `
+    C:\Users\tomas\Downloads\
+  ```
+  > El dump diario vive en el mismo Droplet (cubre borrados/errores). Para cubrir
+  > que explote el Droplet entero, bajate de vez en cuando una copia con el `scp` de arriba.
 
 ## 7. Decisiones tomadas
 - Horas: cálculo automático entrada/salida con descuento de 1 h si > 8 h. (No hay
