@@ -115,8 +115,10 @@ service/CalculoComisionService  las fórmulas + regla de colación
 service/Calculo             record con el resultado del cálculo
 service/JornadaService      CRUD + resumenMensual (recibe el usuarioId del token)
 service/AuthService         registro + login (hash BCrypt, emite el JWT)
-service/AdminService        panel admin: lista usuarios + stats (solo usuario admin)
-service/JornadaNoEncontradaException · EmailYaRegistradoException · AccesoDenegadoException
+service/AdminService        panel admin: lista usuarios + stats + eliminar (solo admin)
+service/EmailDominioValidador  chequea por DNS que el dominio del email reciba mail
+service/excepciones: JornadaNoEncontrada · EmailYaRegistrado · AccesoDenegado ·
+                     UsuarioNoEncontrado · OperacionNoPermitida · EmailInvalido
 security/SecurityConfig     Spring Security stateless + CORS + 401 JSON
 security/JwtService         firma/valida los JWT (HS256, JJWT)
 security/JwtAuthFilter      lee "Authorization: Bearer" en cada request
@@ -141,12 +143,21 @@ web/dto/RegisterRequest · LoginRequest · AuthResponse (incluye id) · AdminUsu
 | Método | Ruta | Qué hace |
 |---|---|---|
 | GET | `/api/admin/usuarios` | lista usuarios + stats (jornadas, total acum., última fecha). 403 si no es admin |
+| DELETE | `/api/admin/usuarios/{id}` | borra usuario + sus jornadas. 403 no-admin · 400 si es la cuenta admin · 404 inexistente |
 
 > **Panel admin (✅ desplegado 2026-06-06):** el usuario admin (id 1, configurable
 > con `app.admin.usuario-id`) ve en su perfil un apartado "Administración" con la
-> lista de usuarios y sus estadísticas. La autorización la valida `AdminService`
-> (403 vía `AccesoDenegadoException`); el front muestra el botón solo si el `id` del
-> token es el admin. Solo lectura por ahora (no edita ni borra usuarios).
+> lista de usuarios y sus estadísticas, y puede **eliminar** usuarios (no a sí mismo).
+> La autorización la valida `AdminService` (403 vía `AccesoDenegadoException`); el
+> front muestra el botón solo si el `id` del token es el admin.
+
+> **Verificación de email en el registro (✅ 2026-06-06):** además del formato
+> (`@Email`), `EmailDominioValidador` consulta DNS (MX, fallback A, vía DNS público
+> 8.8.8.8/1.1.1.1) para confirmar que el dominio pueda recibir correo; rechaza
+> dominios falsos/typos con 400. Configurable con `app.registro.validar-dominio`.
+> NO envía mails ni prueba el buzón exacto (un typo registrado como `gmial.com`,
+> que tiene MX, pasaría). Para prueba real de propiedad haría falta confirmación
+> por email (pendiente).
 
 **Jornadas (requieren `Authorization: Bearer <token>`):** cada usuario ve y toca
 solo SUS jornadas (se filtran por el `usuarioId` del token).
