@@ -53,8 +53,11 @@ public class EmailDominioValidador {
 
         Hashtable<String, String> env = new Hashtable<>();
         env.put("java.naming.factory.initial", "com.sun.jndi.dns.DnsContextFactory");
+        // Consultamos DNS publicos (Google / Cloudflare) en vez del resolver del
+        // contenedor: el DNS embebido de Docker (127.0.0.11) no funciona con JNDI.
+        env.put("java.naming.provider.url", "dns://8.8.8.8 dns://1.1.1.1");
         env.put("com.sun.jndi.dns.timeout.initial", "3000");
-        env.put("com.sun.jndi.dns.timeout.retries", "1");
+        env.put("com.sun.jndi.dns.timeout.retries", "2");
 
         DirContext ctx = null;
         try {
