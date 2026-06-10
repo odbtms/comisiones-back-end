@@ -12,6 +12,7 @@ public record ResumenMensualResponse(
     int mes,
     int diasTrabajados,
     BigDecimal totalHoras,
+    BigDecimal totalVentasBrutas,
     BigDecimal totalPagoBase,
     BigDecimal totalComision,
     BigDecimal totalGeneral,

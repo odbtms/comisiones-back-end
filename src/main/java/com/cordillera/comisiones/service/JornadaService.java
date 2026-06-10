@@ -71,6 +71,7 @@ public class JornadaService {
             .toList();
 
         BigDecimal totalHoras = BigDecimal.ZERO;
+        BigDecimal totalVentasBrutas = BigDecimal.ZERO;
         BigDecimal totalPagoBase = BigDecimal.ZERO;
         BigDecimal totalComision = BigDecimal.ZERO;
         BigDecimal totalGeneral = BigDecimal.ZERO;
@@ -80,6 +81,9 @@ public class JornadaService {
             totalPagoBase = totalPagoBase.add(r.pagoBase());
             totalComision = totalComision.add(r.comision());
             totalGeneral = totalGeneral.add(r.total());
+            if (r.ventasBrutas() != null) {
+                totalVentasBrutas = totalVentasBrutas.add(r.ventasBrutas());
+            }
             if (r.asistio()) {
                 totalHoras = totalHoras.add(r.horas());
                 diasTrabajados++;
@@ -88,7 +92,7 @@ public class JornadaService {
 
         return new ResumenMensualResponse(
             anio, mes, diasTrabajados,
-            totalHoras, totalPagoBase, totalComision, totalGeneral,
+            totalHoras, totalVentasBrutas, totalPagoBase, totalComision, totalGeneral,
             jornadas);
     }
 
