@@ -17,8 +17,6 @@ public interface JornadaRepository extends JpaRepository<Jornada, Long> {
     /** Borra todas las jornadas de un usuario (al eliminar la cuenta). */
     void deleteByUsuarioId(Long usuarioId);
 
-    Optional<Jornada> findByUsuarioIdAndFecha(Long usuarioId, LocalDate fecha);
-
     /** Busca una jornada solo si pertenece al usuario (evita tocar la de otro). */
     Optional<Jornada> findByIdAndUsuarioId(Long id, Long usuarioId);
 

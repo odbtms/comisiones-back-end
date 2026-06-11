@@ -8,7 +8,9 @@ import com.cordillera.comisiones.web.dto.ResumenMensualResponse;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,7 +77,9 @@ public class JornadaService {
         BigDecimal totalPagoBase = BigDecimal.ZERO;
         BigDecimal totalComision = BigDecimal.ZERO;
         BigDecimal totalGeneral = BigDecimal.ZERO;
-        int diasTrabajados = 0;
+        // Como un dia puede tener varios tramos (turno partido), contamos
+        // FECHAS distintas trabajadas, no la cantidad de registros.
+        Set<LocalDate> fechasTrabajadas = new HashSet<>();
 
         for (JornadaResponse r : jornadas) {
             totalPagoBase = totalPagoBase.add(r.pagoBase());
@@ -86,12 +90,12 @@ public class JornadaService {
             }
             if (r.asistio()) {
                 totalHoras = totalHoras.add(r.horas());
-                diasTrabajados++;
+                fechasTrabajadas.add(r.fecha());
             }
         }
 
         return new ResumenMensualResponse(
-            anio, mes, diasTrabajados,
+            anio, mes, fechasTrabajadas.size(),
             totalHoras, totalVentasBrutas, totalPagoBase, totalComision, totalGeneral,
             jornadas);
     }

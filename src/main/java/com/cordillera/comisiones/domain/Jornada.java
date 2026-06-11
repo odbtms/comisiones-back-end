@@ -6,7 +6,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -17,19 +16,19 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Una jornada = el registro de un dia de trabajo.
+ * Una jornada = el registro de un TRAMO de trabajo de un dia.
  *
  * Guarda solo los DATOS DE ENTRADA (lo que el usuario marca/escribe).
  * Los valores derivados (horas, pago base, venta neta, comision, total)
  * NO se guardan: se calculan al vuelo con {@code CalculoComisionService},
  * asi nunca quedan desincronizados si cambia una regla.
+ *
+ * Se permiten VARIOS registros por (usuario, fecha): asi un turno partido
+ * (ej: 10-14 y luego 15-17) se carga como dos tramos del mismo dia y todo
+ * se suma en el resumen mensual. Por eso NO hay unique (usuario_id, fecha).
  */
 @Entity
-@Table(
-    name = "jornada",
-    uniqueConstraints = @UniqueConstraint(
-        name = "uk_jornada_usuario_fecha",
-        columnNames = {"usuario_id", "fecha"}))
+@Table(name = "jornada")
 @Getter
 @Setter
 @NoArgsConstructor

@@ -96,6 +96,11 @@ comision    = ventasNetas * 0.03              # 3%
 total       = ROUND(pagoBase + comision, 0)
 ```
 - Si **no asistió** (feriado / no fui): el día paga **0**.
+- **Turno partido (✅ 2026-06-11):** un mismo día puede cargarse VARIAS veces (ej:
+  10–14 y luego 15–17). Cada tramo es una jornada separada; el resumen mensual suma
+  todo (horas, pago, comisión, total). "Días trabajados" cuenta fechas distintas,
+  no tramos. ⚠️ La colación (>8 h descuenta 1 h) se aplica **por tramo**, así que
+  dos tramos cortos que sumados pasen de 8 h no descuentan.
 - Defaults configurables en `application.properties` / env:
   `valorHora=3098`, `iva=0.19`, `comision=0.03`, colación `umbral=8h` / `descuento=1h`.
 - Los valores derivados **NO se persisten**: se calculan al vuelo en cada respuesta,
@@ -106,8 +111,9 @@ total       = ROUND(pagoBase + comision, 0)
 ## 4. Estructura del backend (hecho)
 
 ```
-domain/Jornada              entidad JPA (un día); guarda solo datos de entrada;
-                            unique (usuario_id, fecha)
+domain/Jornada              entidad JPA (un TRAMO de un día); guarda solo datos de
+                            entrada. SIN unique (usuario_id, fecha): se permiten
+                            varios tramos por día (turno partido) y todo se suma.
 domain/Usuario              cuenta (email único, password BCrypt, nombre)
 repository/JornadaRepository  consultas por usuario + rango de fechas
 repository/UsuarioRepository  buscar por email
@@ -216,7 +222,10 @@ api+db), `docker-compose.prod.yml` (prod: web+api+db), `.dockerignore`, `.env.ex
       el daemon de Docker Desktop estaba apagado al dockerizar.
 - [ ] **Tests** del cálculo (casos del Excel) y del controller.
 - [ ] Revisar si hace falta un endpoint de **listado** sin totales.
-- [x] Manejar conflicto de fecha duplicada (unique constraint) -> 409 amigable.
+- [x] ~~Manejar conflicto de fecha duplicada (unique constraint) -> 409 amigable.~~
+      **REVERTIDO (2026-06-11):** se quitó la unique (usuario_id, fecha) para permitir
+      turnos partidos (varios tramos por día). ⚠️ En el Droplet hay que dropear la
+      constraint a mano una vez (ver abajo); con `ddl-auto=update` Hibernate no la borra.
 - [x] **Multiusuario + login** (Spring Security + JWT, email+password BCrypt).
       Cada usuario ve solo sus jornadas. Desplegado y verificado 2026-06-03.
 
