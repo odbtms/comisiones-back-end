@@ -18,8 +18,8 @@ import org.springframework.stereotype.Service;
  *   total        = REDONDEAR(pagoBase + comision)
  *
  * Las horas salen de (salida - entrada). Regla de colacion: si la jornada
- * supera el umbral (por defecto 8 h) se descuenta 1 h, asi no se paga el
- * almuerzo. Ambos valores son configurables.
+ * alcanza el umbral (por defecto 8 h o mas) se descuenta 1 h, asi no se paga
+ * el almuerzo. Ambos valores son configurables.
  *
  * Si no asistio ("no fui a trabajar"), el dia paga 0.
  *
@@ -84,8 +84,8 @@ public class CalculoComisionService {
         BigDecimal horas = BigDecimal.valueOf(minutos)
             .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 
-        // Colacion: si trabaja mas del umbral, se descuenta 1 h (no se paga almuerzo).
-        if (horas.compareTo(colacionUmbral) > 0) {
+        // Colacion: si trabaja el umbral o mas, se descuenta 1 h (no se paga almuerzo).
+        if (horas.compareTo(colacionUmbral) >= 0) {
             horas = horas.subtract(colacionDescuento);
         }
         return horas;
