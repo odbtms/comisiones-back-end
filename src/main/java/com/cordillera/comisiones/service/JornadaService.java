@@ -26,7 +26,7 @@ public class JornadaService {
     public JornadaService(
         JornadaRepository repo,
         CalculoComisionService calculo,
-        @Value("${app.calculo.valor-hora-default:3098}") BigDecimal valorHoraDefault) {
+        @Value("${app.calculo.valor-hora-default:3208}") BigDecimal valorHoraDefault) {
         this.repo = repo;
         this.calculo = calculo;
         this.valorHoraDefault = valorHoraDefault;
